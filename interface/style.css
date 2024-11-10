@@ -1,0 +1,135 @@
+/* Left Panel Styling */
+.left-panel {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.panel-header h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 1.2rem;
+}
+
+.search-container {
+    margin: 1rem 0;
+}
+
+.search-container input {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    width: 100%;
+}
+
+.chat-list {
+    max-height: calc(100vh - 250px);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.chat-item {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.chat-item:hover {
+    background: var(--hover);
+    transform: translateX(2px);
+}
+
+.chat-item.active {
+    border-color: var(--primary);
+    background: var(--hover);
+}
+
+.chat-item-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+}
+
+.chat-title {
+    flex-grow: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.chat-icon {
+    flex-shrink: 0;
+}
+
+.chat-task {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-timestamp {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-left: auto;
+}
+
+.menu-trigger {
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.menu-trigger:hover {
+    opacity: 1;
+    background: var(--hover);
+}
+
+.menu-content {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.menu-content button {
+    width: 100%;
+    padding: 0.25rem;
+    border-radius: 4px;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+}
+
+.menu-content button:hover {
+    background: var(--hover);
+    transform: translateY(-1px);
+}
+
+/* Scrollbar styling */
+.chat-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-list::-webkit-scrollbar-track {
+    background: var(--glass);
+    border-radius: 3px;
+}
+
+.chat-list::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 3px;
+}
+
+.chat-list::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary);
+} 

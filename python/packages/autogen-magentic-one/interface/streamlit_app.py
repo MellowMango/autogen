@@ -1,4 +1,7 @@
 import streamlit as st
+# Set page config must be the first Streamlit command
+st.set_page_config(page_title="Magentic-One Interface", page_icon="🤖", layout="wide")
+
 import asyncio
 from magentic_one_helper import MagenticOneHelper
 from datetime import datetime
@@ -14,6 +17,45 @@ from tenacity import (
     retry_if_exception_type
 )
 import openai
+import shutil
+
+# Get current directory and API key
+current_dir = os.path.dirname(os.path.abspath(__file__))
+api_key = os.getenv('OPENAI_API_KEY')
+
+# Load API key from .env if not in environment
+if not api_key:
+    try:
+        env_path = os.path.join(os.path.dirname(__file__), '.env')
+        if os.path.exists(env_path):
+            with open(env_path, 'r') as f:
+                content = f.read()
+                for line in content.splitlines():
+                    if line.startswith('OPENAI_API_KEY='):
+                        api_key = line.split('=', 1)[1].strip()
+                        # Handle both quoted and unquoted keys
+                        if (api_key.startswith("'") and api_key.endswith("'")) or \
+                           (api_key.startswith('"') and api_key.endswith('"')):
+                            api_key = api_key[1:-1]
+                        break
+                
+                # Add debug info to help diagnose
+                with st.expander("🔍 API Key Debug", expanded=False):
+                    st.write(f"Raw API key starts with: {api_key[:4] if api_key else 'None'}")
+                    st.write(f"API key length: {len(api_key) if api_key else 0}")
+    except Exception as e:
+        st.error(f"Error loading API key: {str(e)}")
+        st.stop()
+
+if not api_key:
+    st.error("OpenAI API key not found. Please set OPENAI_API_KEY environment variable or add it to .env file.")
+    st.stop()
+
+# Set the API key in environment variable (this is what magentic_one_helper.py expects)
+os.environ['OPENAI_API_KEY'] = api_key
+
+# Remove the openai.api_key setting since magentic_one_helper.py handles this
+# openai.api_key = api_key  # Remove or comment out this line
 
 @retry(
     retry=retry_if_exception_type(openai.RateLimitError),
@@ -29,9 +71,6 @@ async def run_with_retry(func, *args, **kwargs):
         time.sleep(wait_time + 1)
         raise
 
-# Set page config
-st.set_page_config(page_title="Magentic-One Interface", page_icon="🤖", layout="wide")
-
 # Initialize session state
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
@@ -39,10 +78,34 @@ if 'current_chat_index' not in st.session_state:
     st.session_state.current_chat_index = None
 if 'task_completed' not in st.session_state:
     st.session_state.task_completed = False
+if 'viewing_files' not in st.session_state:
+    st.session_state.viewing_files = False
 
 # Initialize theme in session state
 if 'theme' not in st.session_state:
     st.session_state.theme = 'dark'
+
+# Add to your session state initialization
+if 'clipboard' not in st.session_state:
+    st.session_state.clipboard = None
+
+def view_chat_files(folder_path):
+    st.subheader("📁 Chat Files")
+    files = os.listdir(folder_path)
+    
+    for file in files:
+        file_path = os.path.join(folder_path, file)
+        with st.expander(f"📄 {file}"):
+            try:
+                with open(file_path, 'r') as f:
+                    content = f.read()
+                    st.code(content)
+                # Add copy button
+                if st.button("📋 Copy", key=f"copy_{file}"):
+                    st.write("Content copied to clipboard!")
+                    st.session_state['clipboard'] = content
+            except Exception as e:
+                st.error(f"Error reading file: {str(e)}")
 
 def display_url_preview(url):
     """Display a preview for URLs and images"""
@@ -200,22 +263,146 @@ try:
 
     # Left Panel
     with left_col:
-        st.subheader("💬 Chat History")
-        if st.button("➕ New Chat", key="new_chat"):
-            reset_chat()
-
-        search_query = st.text_input("Search...", key="search_chats")
-
-        # Display chat history items
+        # Define logs_dir for file operations
         logs_dir = os.path.join(current_dir, "my_logs")
         os.makedirs(logs_dir, exist_ok=True)
         
+        # Load existing chats if session state is empty
+        if not st.session_state.chat_history:
+            for folder_name in os.listdir(logs_dir):
+                folder_path = os.path.join(logs_dir, folder_name)
+                if os.path.isdir(folder_path):
+                    log_file = os.path.join(folder_path, "log.jsonl")
+                    if os.path.exists(log_file):
+                        # Parse the folder name to get timestamp and task
+                        parts = folder_name.split('_', 2)  # Split into date, uuid, task
+                        if len(parts) >= 3:
+                            timestamp = datetime.strptime(parts[0], '%Y%m%d').strftime("%Y-%m-%d %H:%M:%S")
+                            task = parts[2].replace('-', ' ').capitalize()
+                            
+                            # Load logs
+                            logs = []
+                            try:
+                                with open(log_file, 'r') as f:
+                                    for line in f:
+                                        try:
+                                            log_entry = json.loads(line.strip())
+                                            logs.append(log_entry)
+                                        except json.JSONDecodeError:
+                                            continue
+                            except Exception as e:
+                                st.error(f"Error loading logs for {folder_name}: {str(e)}")
+                                continue
+                            
+                            # Get final answer from the last relevant log entry
+                            final_answer = None
+                            for log in reversed(logs):
+                                if log.get('source') == 'Orchestrator' and 'Final Answer:' in log.get('message', ''):
+                                    final_answer = log['message'].split('Final Answer:', 1)[1].strip()
+                                    break
+                            
+                            chat_entry = {
+                                'task': task,
+                                'timestamp': timestamp,
+                                'logs': logs,
+                                'final_answer': final_answer,
+                                'folder': folder_name
+                            }
+                            st.session_state.chat_history.append(chat_entry)
+            
+            # Sort chats by timestamp (newest first)
+            st.session_state.chat_history.sort(key=lambda x: x['timestamp'], reverse=True)
+
+        # Chat History Header
+        st.markdown("""
+            <div class="left-panel">
+                <div class="panel-header">
+                    <h3>💬 Chat History</h3>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # New Chat Button
+        if st.button("➕ New Chat", key="new_chat", 
+                    help="Start a new chat"):
+            reset_chat()
+
+        # Search Box
+        search_query = st.text_input("🔍", 
+                                   placeholder="Search chats...",
+                                   label_visibility="collapsed",
+                                   key="search_chats")
+
+        # Chat List Container
+        st.markdown('<div class="chat-list-container">', unsafe_allow_html=True)
+        
+        # Add handle_menu_actions function
+        def handle_menu_actions(idx, chat, logs_dir):
+            menu_col1, menu_col2, menu_col3 = st.columns(3)
+            with menu_col1:
+                if st.button("📤 Share", key=f"share_{idx}"):
+                    share_text = f"Task: {chat['task']}\nTimestamp: {chat['timestamp']}\n\n"
+                    if chat.get('final_answer'):
+                        share_text += f"Final Answer: {chat['final_answer']}\n"
+                    st.session_state['clipboard'] = share_text
+                    st.success("Copied to clipboard!")
+            
+            with menu_col2:
+                if st.button("📁 Files", key=f"files_{idx}"):
+                    st.session_state['viewing_files'] = True
+                    st.session_state['viewing_folder'] = os.path.join(logs_dir, chat['folder'])
+                    st.rerun()
+            
+            with menu_col3:
+                if st.button("🗑️ Delete", key=f"delete_{idx}"):
+                    folder_path = os.path.join(logs_dir, chat['folder'])
+                    try:
+                        # Delete the folder and its contents
+                        shutil.rmtree(folder_path)
+                        # Remove the chat from session state history
+                        st.session_state.chat_history.pop(idx)
+                        # Reset current chat index if we're deleting the currently selected chat
+                        if st.session_state.current_chat_index == idx:
+                            st.session_state.current_chat_index = None
+                            st.session_state.task_completed = False
+                        # Adjust current_chat_index if we're deleting a chat before it
+                        elif st.session_state.current_chat_index and st.session_state.current_chat_index > idx:
+                            st.session_state.current_chat_index -= 1
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error deleting chat: {str(e)}")
+
         for idx, chat in enumerate(st.session_state.chat_history):
-            chat_folder = chat['folder']
             if search_query.lower() in chat['task'].lower():
-                if st.button(f"🗨️ {chat['task']}", key=f"chat_{idx}"):
-                    st.session_state.current_chat_index = idx
-                    st.session_state.task_completed = True
+                chat_container = st.container()
+                
+                with chat_container:
+                    col1, col2 = st.columns([0.85, 0.15])
+                    
+                    with col1:
+                        # Add custom class to button
+                        button_label = f"💭 {chat['task']} - {chat['timestamp'].split()[0]}"
+                        if st.button(button_label, 
+                                   key=f"chat_btn_{idx}", 
+                                   help="Select this chat",
+                                   use_container_width=True,
+                                   # Add custom CSS class
+                                   kwargs={"class": "chat-item-button"}):
+                            st.session_state.current_chat_index = idx
+                            st.session_state.task_completed = True
+                            st.rerun()
+                    
+                    with col2:
+                        if st.button("⋮", key=f"menu_btn_{idx}", help="Open menu"):
+                            st.session_state[f'show_menu_{idx}'] = not st.session_state.get(f'show_menu_{idx}', False)
+                    
+                    # Show menu if activated
+                    if st.session_state.get(f'show_menu_{idx}', False):
+                        st.markdown('<div class="chat-menu">', unsafe_allow_html=True)
+                        handle_menu_actions(idx, chat, logs_dir)
+                        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # Main Content
     with main_col:
@@ -228,15 +415,16 @@ try:
             if st.button("Run Task", key="run_task", disabled=not task.strip()):
                 # Create a folder name using timestamp, UUID and truncated task
                 folder_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}_{task.strip().lower()[:20]}"
-                chat_folder = os.path.join(logs_dir, folder_name)
-                os.makedirs(chat_folder, exist_ok=True)
+                chat_folder = folder_name  # Use folder name instead of full path
+                full_chat_folder = os.path.join(logs_dir, chat_folder)
+                os.makedirs(full_chat_folder, exist_ok=True)
 
                 new_chat = {
                     'task': task,
                     'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     'logs': [],
                     'final_answer': None,
-                    'folder': chat_folder
+                    'folder': folder_name
                 }
                 st.session_state.chat_history.append(new_chat)
                 st.session_state.current_chat_index = len(st.session_state.chat_history) - 1
@@ -269,10 +457,18 @@ try:
 
                         async for log_entry in magnetic_one.stream_logs():
                             chat['logs'].append(log_entry)
-                            # Save log entry to file
-                            with open(os.path.join(current_dir, "my_logs", chat['folder'], "log.jsonl"), "a") as log_file:
-                                log_file.write(json.dumps(log_entry) + "\n")
-                            
+                            # Save log entry to file with error handling
+                            try:
+                                with open(os.path.join(current_dir, "my_logs", chat['folder'], "log.jsonl"), "a") as log_file:
+                                    json_str = json.dumps(log_entry)
+                                    log_file.write(json_str + "\n")
+                            except json.JSONDecodeError as e:
+                                st.error(f"Error writing log entry: {str(e)}")
+                                continue
+                            except Exception as e:
+                                st.error(f"Error saving log: {str(e)}")
+                                continue
+
                             if "source" in log_entry and "message" in log_entry:
                                 source = log_entry["source"]
                                 message = log_entry["message"]

@@ -1,6 +1,0 @@
-
-Seattle, WA Weather:
-- Temperature: 61°F
-- Wind: 8 MPH
-- Humidity: 59%
-- Condition: Partly sunny

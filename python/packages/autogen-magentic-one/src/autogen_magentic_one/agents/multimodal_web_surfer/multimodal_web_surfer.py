@@ -707,12 +707,18 @@ When deciding between tools, consider if the request can be best addressed by:
 
     async def _click_id(self, identifier: str) -> None:
         assert self._page is not None
+        self.logger.debug(f"Attempting to click element with __elementId='{identifier}'")
         target = self._page.locator(f"[__elementId='{identifier}']")
 
-        # See if it exists
-        try:
-            await target.wait_for(timeout=100)
-        except TimeoutError:
+        for attempt in range(3):
+            try:
+                await target.wait_for(timeout=1000)
+                break
+            except TimeoutError:
+                self.logger.warning(f"Attempt {attempt + 1}: Element with __elementId='{identifier}' not found. Retrying...")
+                await asyncio.sleep(0.5)
+        else:
+            self.logger.error(f"No element found with __elementId='{identifier}' after multiple attempts.")
             raise ValueError("No such element.") from None
 
         # Click it

@@ -47,6 +47,28 @@ hr {
     box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* Improve chat item button styling */
+.stButton > button.chat-item-button {
+    width: 100%;
+    text-align: left !important;
+    background: var(--glass) !important;
+    border: 1px solid var(--border) !important;
+    padding: 0.75rem 1rem !important;
+    margin-bottom: 0.5rem !important;
+    transition: all 0.2s ease;
+}
+
+.stButton > button.chat-item-button:hover {
+    background: var(--hover) !important;
+    transform: translateX(2px);
+}
+
+/* Remove duplicate chat item styles since we're using Streamlit buttons */
+.left-panel-chat-item,
+.chat-item-content {
+    display: none;
+}
+
 /* Input styles */
 input, select, textarea {
     background-color: var(--card) !important;
@@ -75,20 +97,79 @@ input::placeholder, textarea::placeholder {
     box-shadow: var(--shadow);
 }
 
-/* Chat history item */
-.chat-item {
-    background-color: var(--card) !important;
-    color: var(--text) !important;
-    padding: 1rem !important;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    margin-bottom: 1rem !important;
-    cursor: pointer;
-    transition: background-color 0.3s;
+/* Left Panel Styling */
+.left-panel {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
 }
 
-.chat-item:hover {
-    background-color: var(--hover) !important;
+.panel-header h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 1.2rem;
+}
+
+.search-container {
+    margin: 1rem 0;
+}
+
+.search-container input {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    width: 100%;
+}
+
+.left-panel-chat-list {
+    max-height: calc(100vh - 250px);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+/* Menu dots button styling */
+.menu-dots {
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 1.2rem;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+}
+
+.menu-dots:hover {
+    opacity: 1;
+    background: var(--hover);
+}
+
+/* Menu styling */
+.chat-menu {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-top: 0.25rem;
+    padding: 0.5rem;
+}
+
+.chat-menu button {
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem;
+    margin: 0.2rem 0;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    transition: background 0.2s ease;
+    border-radius: 4px;
+}
+
+.chat-menu button:hover {
+    background: var(--hover);
 }
 
 /* Agent message styling */
@@ -120,22 +201,22 @@ input::placeholder, textarea::placeholder {
 }
 
 /* Scrollbar styling */
-::-webkit-scrollbar {
-    width: 10px;
+.left-panel-chat-list::-webkit-scrollbar {
+    width: 6px;
 }
 
-::-webkit-scrollbar-track {
-    background: var(--background) !important;
+.left-panel-chat-list::-webkit-scrollbar-track {
+    background: var(--glass);
+    border-radius: 3px;
 }
 
-::-webkit-scrollbar-thumb {
-    background: var(--hover) !important;
-    border-radius: 5px;
-    border: 2px solid var(--background);
+.left-panel-chat-list::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 3px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-    background: var(--border) !important;
+.left-panel-chat-list::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary);
 }
 
 /* Responsive adjustments */
@@ -182,7 +263,7 @@ code {
 /* Status message improvements */
 div[data-testid="stMarkdownContainer"] > div[class*="stAlert"] {
     background-color: var(--card) !important;
-    color: var(--text) !important;
+    color: #33691E !important;
     border-left-color: var(--primary) !important;
 }
 
@@ -191,4 +272,59 @@ div[data-testid="stMarkdownContainer"] > div[class*="stAlert"] {
     border: 1px solid var(--border);
     border-radius: 5px;
     overflow: hidden;
+}
+
+/* Add missing dots styling */
+.dots {
+    font-size: 1.2rem;
+    line-height: 1;
+    color: var(--text);
+    opacity: 0.7;
+}
+
+/* Optional: improve dots visibility on hover */
+.left-panel-menu-trigger:hover .dots {
+    opacity: 1;
+}
+
+/* Chat list container improvements */
+.chat-list-container {
+    margin-top: 1rem;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.chat-metadata {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.chat-menu-trigger {
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+}
+
+.chat-menu {
+    padding: 0.5rem;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+}
+
+.chat-menu button {
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem;
+    margin: 0.2rem 0;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    transition: background 0.2s ease;
+    border-radius: 4px;
+}
+
+.chat-menu button:hover {
+    background: var(--hover);
 }

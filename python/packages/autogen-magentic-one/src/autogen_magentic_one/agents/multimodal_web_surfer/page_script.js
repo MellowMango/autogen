@@ -81,6 +81,7 @@ var MultimodalWebSurfer = MultimodalWebSurfer || (function() {
       for (let i=0; i<elements.length; i++) {
           if (!elements[i].hasAttribute("__elementId")) {
               elements[i].setAttribute("__elementId", "" + (nextLabel++));
+              console.log(`Annotated element with __elementId: ${elements[i].getAttribute("__elementId")}`);
           }
       }
   };
